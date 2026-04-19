@@ -5,8 +5,230 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Saber.Risk.Client"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="Saber Risk Monitor - Real-Time Dashboard" Height="700" Width="1000">
+    <Window.Resources>
+        <!-- Profesjonalny pędzel dla tła -->
+        <LinearGradientBrush x:Key="HeaderBackground" EndPoint="0.5,1" StartPoint="0.5,0">
+            <GradientStop Color="#FF1B1F23" Offset="0"/>
+            <GradientStop Color="#FF24292E" Offset="1"/>
+        </LinearGradientBrush>
 
+        <!-- Styl dla nagłówka kolumn DataGrid -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#24292E"/>
+            <Setter Property="Foreground" Value="#AEB1B5"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="#3F4448"/>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        </Style>
+    </Window.Resources>
+
+    <Window.Background>
+        <DynamicResource ResourceKey="WindowBackground" />
+    </Window.Background>
+    <Grid Background="{DynamicResource WindowBackground}" Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <!-- Header -->
+            <RowDefinition Height="Auto" />
+            <!-- Search/Tools -->
+            <RowDefinition Height="*" />
+            <!-- Table -->
+            <RowDefinition Height="Auto" />
+            <!-- Pagination -->
+        </Grid.RowDefinitions>
+
+        <!-- Nagłówek z licznikiem całkowitym -->
+        <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+            <Button Command="{Binding ToggleThemeCommand}" 
+            Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"
+            Margin="0,0,20,0" Cursor="Hand">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="◐" Foreground="White" FontSize="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="SWITCH THEME" Foreground="White" FontSize="10" VerticalAlignment="Center" FontWeight="Bold"/>
+                </StackPanel>
+            </Button>
+
+            <!-- Tutaj Twoje stare statystyki (Positions, Latency) -->
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{Binding TotalItems, StringFormat='POSITIONS: {0:N0}'}" Foreground="White" FontSize="18" FontWeight="Bold"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Pasek narzędziowy: Wyszukiwanie i Rozmiar strony -->
+        <Border Grid.Row="1" 
+                Background="{DynamicResource CardBackground}"
+                BorderBrush="{DynamicResource SecondaryTextBrush}" 
+                Padding="10" 
+                Margin="0,0,0,10" 
+                CornerRadius="5">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Search Ticker/Book:" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold"/>
+                <TextBox Width="250" Height="25" VerticalContentAlignment="Center"
+                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
+
+                <TextBlock Text="Page Size:" VerticalAlignment="Center" Margin="25,0,10,0" FontWeight="SemiBold"/>
+                <ComboBox Width="70" Height="25" 
+                          SelectedValue="{Binding PageSize, Mode=TwoWay}" 
+                          SelectedValuePath="Content">
+                    <ComboBoxItem Content="25"/>
+                    <ComboBoxItem Content="50"/>
+                    <ComboBoxItem Content="100"/>
+                    <ComboBoxItem Content="500"/>
+                </ComboBox>
+            </StackPanel>
+        </Border>
+
+        <!-- Główna Tabela RiskPositions -->
+        <DataGrid Grid.Row="2" 
+          ItemsSource="{Binding RiskPositions}"
+            Background="{DynamicResource CardBackground}"
+          RowBackground="{DynamicResource CardBackground}"
+          AlternatingRowBackground="{DynamicResource WindowBackground}"
+          BorderBrush="{DynamicResource SecondaryTextBrush}"
+          Foreground="{DynamicResource TextBrush}"
+          AutoGenerateColumns="False" 
+          IsReadOnly="True"
+          VirtualizingStackPanel.IsVirtualizing="True" 
+          VirtualizingStackPanel.VirtualizationMode="Recycling"
+          EnableRowVirtualization="True">
+
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Trend (+/-)" Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="5,0">
+                                <!-- Strzałka w górę -->
+                                <TextBlock Text="▲" Foreground="#2ECC71" Margin="0,0,4,0" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DeltaAction}" Value="Increase">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <!-- Strzałka w dół -->
+                                <TextBlock Text="▼" Foreground="#E74C3C" Margin="0,0,4,0" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DeltaAction}" Value="Decrease">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <!-- Wartość różnicy (DeltaDiff) -->
+                                <TextBlock Text="{Binding DeltaDiff, StringFormat={}{0:+0.0000;-0.0000;0.0000}}" 
+                               VerticalAlignment="Center" FontSize="11" FontWeight="Bold">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DeltaAction}" Value="Increase">
+                                                    <Setter Property="Foreground" Value="#2ECC71"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DeltaAction}" Value="Decrease">
+                                                    <Setter Property="Foreground" Value="#E74C3C"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DeltaAction}" Value="None">
+                                                    <Setter Property="Foreground" Value="#95A5A6"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- TWOJA KOLUMNA DELTA (Miganie 1.5s) -->
+                <DataGridTextColumn Header="Delta" Binding="{Binding Delta, StringFormat={}{0:N4}}" Width="85">
+                    <DataGridTextColumn.CellStyle>
+                        <Style TargetType="DataGridCell">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DeltaAction}" Value="Increase">
+                                    <Setter Property="Background" Value="#CCFFD1"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding DeltaAction}" Value="Decrease">
+                                    <Setter Property="Background" Value="#FFD6D6"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.CellStyle>
+                </DataGridTextColumn>
+                <!-- Kolumny stałe (bez migania) -->
+                <DataGridTextColumn Header="Ticker" Binding="{Binding Ticker}" Width="120" FontWeight="Bold" />
+                <DataGridTextColumn Header="Book" Binding="{Binding Book}" Width="120" />
+                <DataGridTextColumn Header="CCY" Binding="{Binding Currency}" Width="60" />
+
+                <!-- TUTAJ WRZUCASZ NOWY KOD KOLUMNY DELTA (Z MIGANIE) -->
+                <DataGridTextColumn Header="Delta" Binding="{Binding Delta, StringFormat={}{0:N4}}" Width="85">
+                    <DataGridTextColumn.CellStyle>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Padding" Value="4"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DeltaAction}" Value="Increase">
+                                    <Setter Property="Background" Value="#CCFFD1"/>
+                                    <!-- Zielony -->
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding DeltaAction}" Value="Decrease">
+                                    <Setter Property="Background" Value="#FFD6D6"/>
+                                    <!-- Czerwony -->
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.CellStyle>
+                </DataGridTextColumn>
+
+                <!-- Pozostałe kolumny (Gamma, Vega itd.) -->
+                <DataGridTextColumn Header="Gamma" Binding="{Binding Gamma, StringFormat={}{0:N6}}" Width="85" />
+
+                <!-- KOLUMNA EXPOSURE (Z MIGANIE) -->
+                <DataGridTextColumn Header="Exposure" Binding="{Binding Exposure, StringFormat={}{0:N2}}" Width="*">
+                    <DataGridTextColumn.CellStyle>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Padding" Value="4"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ExposureAction}" Value="Increase">
+                                    <Setter Property="Background" Value="#CCFFD1"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ExposureAction}" Value="Decrease">
+                                    <Setter Property="Background" Value="#FFD6D6"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.CellStyle>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Panel Paginacji -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,5">
+            <Button Content="&#xab; Prev" Command="{Binding PrevPageCommand}" Width="70" Height="25" Margin="5,0"/>
+
+            <Border BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="3" Padding="10,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Page " VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding CurrentPage}" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <TextBlock Text=" of " VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalPages}" FontWeight="Bold" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <Button Content="Next &#xbb;" Command="{Binding NextPageCommand}" Width="70" Height="25" Margin="5,0"/>
+        </StackPanel>
     </Grid>
 </Window>

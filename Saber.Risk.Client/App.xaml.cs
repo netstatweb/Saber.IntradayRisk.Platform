@@ -9,6 +9,14 @@ namespace Saber.Risk.Client
     /// </summary>
     public partial class App : Application
     {
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            base.OnStartup(e);
+
+            // TO JEST KLUCZOWE:
+            var loginWindow = new LoginWindow();
+            loginWindow.Show();
+        }
     }
 
 }

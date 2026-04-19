@@ -1,24 +1,25 @@
-﻿using System.Text;
+﻿using Saber.Risk.Client.ViewModels;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Saber.Risk.Client
 {
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// Logika interakcji dla MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        public MainWindow(string token) // Przyjmujemy token z okna logowania
         {
             InitializeComponent();
+
+            // 1. Najpierw tworzymy instancję ViewModelu
+            var vm = new RiskDashboardViewModel();
+
+            // 2. Przypisujemy ją do DataContext (żeby bindowanie w XAML działało)
+            this.DataContext = vm;
+
+            // 3. Przekazujemy token do ViewModelu, aby odblokować dostęp do API
+            vm.SetToken(token);
         }
     }
 }
